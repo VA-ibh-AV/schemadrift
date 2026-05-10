@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SchemaDrift — In-process schema drift detection for Go</title>
+  <meta name="description" content="Detect JSON schema drift in Kafka and Redis Streams before it silently corrupts your pipeline. Zero config, zero infrastructure." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red:        #FF4438;
+      --red-dim:    #cc3529;
+      --red-glow:   rgba(255, 68, 56, 0.18);
+      --red-soft:   rgba(255, 68, 56, 0.08);
+      --bg:         #0d0d0d;
+      --bg2:        #111111;
+      --bg3:        #191919;
+      --bg4:        #212121;
+      --border:     #272727;
+      --border2:    #333333;
+      --text:       #e8e8e8;
+      --text2:      #a0a0a0;
+      --text3:      #666666;
+      --code-bg:    #161616;
+      --green:      #3ecf8e;
+      --yellow:     #f0c040;
+      --blue:       #5b9cf6;
+      --radius:     10px;
+      --radius-lg:  16px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--red); text-decoration: none; }
+    a:hover { color: #ff6b61; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13, 13, 13, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .nav-logo .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--red);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -1px;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-left: auto;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text2);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-gh {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--bg4);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text) !important;
+      transition: border-color .2s, background .2s;
+    }
+    .nav-gh:hover { border-color: var(--red); background: var(--bg3); }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      padding: 100px 24px 90px;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 500px;
+      background: radial-gradient(ellipse at center, rgba(255,68,56,0.13) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--red-soft);
+      border: 1px solid rgba(255,68,56,0.3);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--red);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+    .hero-badge span { width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    h1 {
+      font-size: clamp(2.4rem, 5vw, 3.8rem);
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 22px;
+    }
+    h1 em { font-style: normal; color: var(--red); }
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      color: var(--text2);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 52px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 0 0 0 var(--red-glow);
+    }
+    .btn-primary:hover { background: #ff5a50; color: #fff; box-shadow: 0 0 24px var(--red-glow); }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border2);
+    }
+    .btn-outline:hover { border-color: var(--red); color: var(--red); background: var(--red-soft); }
+
+    .install-block {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--text2);
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .install-block:hover { border-color: var(--border2); }
+    .install-block .prompt { color: var(--red); }
+    .install-block .copy-btn {
+      background: var(--bg4);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 0.75rem;
+      color: var(--text3);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all .2s;
+    }
+    .install-block .copy-btn:hover { border-color: var(--red); color: var(--red); }
+
+    /* ── STATS ── */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      flex-wrap: wrap;
+    }
+    .stat {
+      flex: 1;
+      min-width: 160px;
+      padding: 28px 32px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-val {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--red);
+      letter-spacing: -0.03em;
+    }
+    .stat-label { font-size: 0.82rem; color: var(--text3); margin-top: 4px; }
+
+    /* ── SECTIONS ── */
+    section { padding: 88px 24px; }
+    .container { max-width: 1160px; margin: 0 auto; }
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 12px;
+    }
+    h2 {
+      font-size: clamp(1.7rem, 3vw, 2.4rem);
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      font-size: 1rem;
+      color: var(--text2);
+      max-width: 540px;
+      line-height: 1.7;
+    }
+
+    /* ── PROBLEM ── */
+    .problem-section { background: var(--bg); }
+    .problem-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 52px;
+    }
+    @media(max-width: 768px){ .problem-grid { grid-template-columns: 1fr; } }
+    .problem-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+    }
+    .problem-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .tag-before { color: var(--green); }
+    .tag-after  { color: var(--red);   }
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .hl-key    { color: #7ec8e3; }
+    .hl-str    { color: #b8e1b8; }
+    .hl-num    { color: #f0c040; }
+    .hl-bool   { color: #c9a0dc; }
+    .hl-null   { color: #ff6b6b; }
+    .hl-drift  { color: var(--red); font-weight: 600; }
+    .hl-ok     { color: var(--green); }
+    .hl-dim    { color: var(--text3); }
+    .hl-arrow  { color: var(--red); }
+
+    /* ── FEATURES ── */
+    .features-section { background: var(--bg2); }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 52px;
+    }
+    @media(max-width: 900px){ .features-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media(max-width: 560px){ .features-grid { grid-template-columns: 1fr; } }
+    .feature-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      transition: border-color .25s, box-shadow .25s;
+    }
+    .feature-card:hover {
+      border-color: rgba(255,68,56,0.4);
+      box-shadow: 0 0 28px rgba(255,68,56,0.06);
+    }
+    .feature-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: var(--red-soft);
+      border: 1px solid rgba(255,68,56,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 18px;
+    }
+    .feature-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 9px; }
+    .feature-card p  { font-size: 0.88rem; color: var(--text2); line-height: 1.65; }
+
+    /* ── HOW IT WORKS ── */
+    .how-section { background: var(--bg); }
+    .flow-diagram {
+      margin-top: 52px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 40px 32px;
+      overflow-x: auto;
+    }
+    .flow-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+      row-gap: 16px;
+    }
+    .flow-box {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 14px 22px;
+      text-align: center;
+      min-width: 130px;
+    }
+    .flow-box.active {
+      border-color: rgba(255,68,56,0.5);
+      background: var(--red-soft);
+    }
+    .flow-box .fb-label { font-size: 0.75rem; color: var(--text3); margin-bottom: 4px; }
+    .flow-box .fb-name  { font-size: 0.92rem; font-weight: 600; }
+    .flow-box .fb-sub   { font-size: 0.72rem; color: var(--text3); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+    .flow-arrow {
+      color: var(--red);
+      font-size: 1.3rem;
+      padding: 0 10px;
+      flex-shrink: 0;
+    }
+    .flow-split {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .flow-split-label {
+      font-size: 0.72rem;
+      color: var(--text3);
+      padding-left: 6px;
+    }
+    .flow-notes {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    @media(max-width: 700px){ .flow-notes { grid-template-columns: 1fr; } }
+    .flow-note {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+    }
+    .flow-note strong { color: var(--red); font-size: 0.85rem; display: block; margin-bottom: 4px; }
+    .flow-note p { font-size: 0.82rem; color: var(--text2); }
+
+    /* ── CODE EXAMPLES ── */
+    .code-section { background: var(--bg2); }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-top: 40px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text3);
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 500;
+      padding: 10px 18px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color .2s, border-color .2s;
+    }
+    .tab-btn:hover { color: var(--text2); }
+    .tab-btn.active { color: var(--red); border-bottom-color: var(--red); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      padding: 28px 32px;
+      overflow-x: auto;
+      position: relative;
+    }
+    .code-block pre {
+      font-size: 0.83rem;
+      line-height: 1.75;
+    }
+    .code-header {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .code-header .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .code-header .dot-r { background: #ff5f57; }
+    .code-header .dot-y { background: #febc2e; }
+    .code-header .dot-g { background: #28c840; }
+    .code-header .filename { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--text3); margin-left: 6px; }
+
+    .go-kw    { color: #c792ea; }
+    .go-fn    { color: #82aaff; }
+    .go-str   { color: #c3e88d; }
+    .go-num   { color: #f78c6c; }
+    .go-cmt   { color: #546e7a; font-style: italic; }
+    .go-type  { color: #ffcb6b; }
+    .go-pkg   { color: #89ddff; }
+    .go-field { color: #e8e8e8; }
+    .go-op    { color: #89ddff; }
+
+    /* ── POLICIES ── */
+    .policies-section { background: var(--bg); }
+    .policy-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 52px;
+    }
+    @media(max-width: 768px){ .policy-grid { grid-template-columns: 1fr; } }
+    .policy-card {
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .policy-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .policy-warn   { background: var(--bg2); }
+    .policy-warn::before   { background: var(--yellow); }
+    .policy-block  { background: var(--bg2); }
+    .policy-block::before  { background: var(--red); }
+    .policy-quar   { background: var(--bg2); }
+    .policy-quar::before   { background: var(--blue); }
+    .policy-name {
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 10px;
+    }
+    .policy-warn  .policy-name { color: var(--yellow); }
+    .policy-block .policy-name { color: var(--red); }
+    .policy-quar  .policy-name { color: var(--blue); }
+    .policy-desc { font-size: 0.88rem; color: var(--text2); margin-bottom: 16px; line-height: 1.6; }
+    .policy-when { font-size: 0.8rem; color: var(--text3); }
+    .policy-when strong { color: var(--text2); display: block; margin-bottom: 4px; }
+
+    /* ── EVENTS ── */
+    .events-section { background: var(--bg2); }
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 52px;
+    }
+    @media(max-width: 640px){ .events-grid { grid-template-columns: 1fr; } }
+    .event-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 24px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .event-kind {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: var(--red-soft);
+      color: var(--red);
+      border: 1px solid rgba(255,68,56,0.2);
+      border-radius: 6px;
+      padding: 3px 8px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .event-info h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 5px; }
+    .event-info p  { font-size: 0.82rem; color: var(--text2); line-height: 1.55; }
+
+    /* ── CTA ── */
+    .cta-section {
+      background: var(--bg);
+      text-align: center;
+      border-top: 1px solid var(--border);
+    }
+    .cta-card {
+      background: linear-gradient(135deg, var(--bg2) 0%, #1a0d0c 100%);
+      border: 1px solid rgba(255,68,56,0.25);
+      border-radius: var(--radius-lg);
+      padding: 60px 40px;
+      max-width: 700px;
+      margin: 0 auto;
+      box-shadow: 0 0 80px rgba(255,68,56,0.07);
+    }
+    .cta-card h2 { margin-bottom: 14px; }
+    .cta-card p { color: var(--text2); margin-bottom: 32px; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+    }
+    .footer-inner {
+      max-width: 1160px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-logo { font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; }
+    .footer-links { display: flex; gap: 24px; list-style: none; flex-wrap: wrap; }
+    .footer-links a { color: var(--text3); font-size: 0.85rem; transition: color .2s; }
+    .footer-links a:hover { color: var(--text2); }
+    .footer-copy { color: var(--text3); font-size: 0.8rem; width: 100%; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); text-align: center; }
+
+    /* ── MISC ── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+    .text-center { text-align: center; }
+    .mt-sm { margin-top: 8px; }
+    .mt-md { margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo" style="text-decoration:none">
+      <div class="logo-icon">SD</div>
+      SchemaDrift
+    </a>
+    <ul class="nav-links">
+      <li><a href="#how-it-works">How it works</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#examples">Examples</a></li>
+      <li><a href="#policies">Policies</a></li>
+      <li><a href="https://pkg.go.dev/github.com/VA-ibh-AV/schemadrift" target="_blank">Docs</a></li>
+      <li>
+        <a href="https://github.com/VA-ibh-AV/schemadrift" target="_blank" class="nav-gh">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge"><span></span> v0.1.0 — now available</div>
+  <h1>Stop silent schema<br/>drift <em>before it hits prod</em></h1>
+  <p class="hero-sub">
+    In-process drift detection for JSON message streams. Learns your schema, detects changes on the first drifted message. No schema registry. No sidecar. No broker change.
+  </p>
+  <div class="hero-actions">
+    <a href="#examples" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4,8 8,4 12,8"/><line x1="8" y1="4" x2="8" y2="13"/></svg>
+      Get Started
+    </a>
+    <a href="https://github.com/VA-ibh-AV/schemadrift" class="btn btn-outline" target="_blank">View on GitHub</a>
+  </div>
+  <div class="install-block" onclick="copyInstall(this)">
+    <span class="prompt">$</span>
+    <span>go get github.com/VA-ibh-AV/schemadrift</span>
+    <button class="copy-btn" id="copy-btn">Copy</button>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat"><div class="stat-val">0</div><div class="stat-label">External dependencies in core</div></div>
+  <div class="stat"><div class="stat-val">4</div><div class="stat-label">Drift event kinds detected</div></div>
+  <div class="stat"><div class="stat-val">3</div><div class="stat-label">Enforcement policies</div></div>
+  <div class="stat"><div class="stat-val">1st</div><div class="stat-label">Drifted message caught</div></div>
+</div>
+
+<!-- PROBLEM -->
+<section class="problem-section" id="problem">
+  <div class="container">
+    <div class="section-label">The Problem</div>
+    <h2>Producers change schemas.<br/>Consumers find out the hard way.</h2>
+    <p class="section-sub">
+      In microservice architectures, a producer can silently rename a field, change a <code style="color:var(--red);font-family:'JetBrains Mono',monospace;font-size:.9em">float64</code> to a <code style="color:var(--red);font-family:'JetBrains Mono',monospace;font-size:.9em">string</code>, or add an undocumented key — and your consumer receives no error at the broker level. The message is delivered. Your service just behaves wrongly.
+    </p>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <h3 class="tag-before">✓ &nbsp;Before — what your consumer expects</h3>
+        <pre><span class="hl-dim">{</span>
+  <span class="hl-key">"alert_id"</span><span class="hl-dim">:</span> <span class="hl-str">"abc-123"</span><span class="hl-dim">,</span>
+  <span class="hl-key">"value"</span><span class="hl-dim">:</span>    <span class="hl-num">87.5</span><span class="hl-dim">,</span>            <span class="hl-ok">← float64</span>
+  <span class="hl-key">"fired_at"</span><span class="hl-dim">:</span> <span class="hl-str">"2025-05-08T10:00:00Z"</span><span class="hl-dim">,</span>  <span class="hl-ok">← RFC3339 string</span>
+  <span class="hl-key">"resolved"</span><span class="hl-dim">:</span> <span class="hl-bool">false</span>
+<span class="hl-dim">}</span></pre>
+      </div>
+      <div class="problem-card">
+        <h3 class="tag-after">✗ &nbsp;After — what the producer silently changed</h3>
+        <pre><span class="hl-dim">{</span>
+  <span class="hl-key">"alert_id"</span><span class="hl-dim">:</span>  <span class="hl-str">"abc-123"</span><span class="hl-dim">,</span>
+  <span class="hl-key">"value"</span><span class="hl-dim">:</span>     <span class="hl-str">"87.5%"</span><span class="hl-dim">,</span>        <span class="hl-drift">← DRIFT: number → string</span>
+  <span class="hl-key">"fired_at"</span><span class="hl-dim">:</span>  <span class="hl-num">1715161200</span><span class="hl-dim">,</span>     <span class="hl-drift">← DRIFT: string → number</span>
+  <span class="hl-key">"severity"</span><span class="hl-dim">:</span>  <span class="hl-str">"critical"</span>      <span class="hl-drift">← DRIFT: new field</span>
+  <span class="hl-dim">// "resolved" removed          </span><span class="hl-drift">← DRIFT: missing field</span>
+<span class="hl-dim">}</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h2>Everything you need.<br/>Nothing you don't.</h2>
+    <p class="section-sub">Drop one library into your consumer. No config files, no schema definitions, no external services.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🧠</div>
+        <h3>Self-learning baseline</h3>
+        <p>Observes N messages during warm-up to infer field types, required-ness, and nullability. No schema to write by hand.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>First-message detection</h3>
+        <p>Catches drift on the very first message that doesn't match the learned baseline — not after thousands of bad messages.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Three enforcement policies</h3>
+        <p>Warn and continue, block and return an error, or quarantine to a dead-letter queue. Choose per-topic or per-stream.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💾</div>
+        <h3>Baseline persistence</h3>
+        <p>Atomically saves the learned baseline to disk. Restarts load instantly — no re-learning from scratch.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📦</div>
+        <h3>Zero core dependencies</h3>
+        <p><code style="font-family:'JetBrains Mono',monospace;font-size:.85em;color:var(--red)">pkg/drift</code> uses only stdlib. Adapters depend solely on the broker SDK you already use.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Pluggable metrics</h3>
+        <p>Implement <code style="font-family:'JetBrains Mono',monospace;font-size:.85em;color:var(--red)">metrics.Recorder</code> to emit to OTel, Prometheus, StatsD, or any backend.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how-it-works">
+  <div class="container">
+    <div class="section-label">How It Works</div>
+    <h2>Simple data flow.<br/>Powerful guarantees.</h2>
+    <p class="section-sub">Every message follows the same deterministic path through the pipeline.</p>
+    <div class="flow-diagram">
+      <div class="flow-row">
+        <div class="flow-box">
+          <div class="fb-label">Input</div>
+          <div class="fb-name">raw []byte</div>
+          <div class="fb-sub">JSON payload</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box active">
+          <div class="fb-label">Step 1</div>
+          <div class="fb-name">Fingerprinter</div>
+          <div class="fb-sub">schema.go</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box active">
+          <div class="fb-label">Step 2</div>
+          <div class="fb-name">Baseline</div>
+          <div class="fb-sub">baseline.go</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box active">
+          <div class="fb-label">Step 3</div>
+          <div class="fb-name">Detector</div>
+          <div class="fb-sub">detector.go</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box active">
+          <div class="fb-label">Step 4</div>
+          <div class="fb-name">Enforcer</div>
+          <div class="fb-sub">policy.go</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-split">
+          <div class="flow-split-label">pass</div>
+          <div class="flow-box">
+            <div class="fb-name">Your Handler</div>
+            <div class="fb-sub">business logic</div>
+          </div>
+          <div class="flow-split-label">quarantine</div>
+          <div class="flow-box" style="border-color:rgba(91,156,246,0.4);background:rgba(91,156,246,0.06)">
+            <div class="fb-name" style="color:var(--blue)">DLQ Sink</div>
+            <div class="fb-sub">replay queue</div>
+          </div>
+        </div>
+      </div>
+      <div class="flow-notes">
+        <div class="flow-note">
+          <strong>Fingerprinter</strong>
+          <p>One JSON decode pass. Produces a flat <code style="font-family:'JetBrains Mono',monospace">map[fieldPath]FieldType</code> using dot-notation and <code style="font-family:'JetBrains Mono',monospace">items[].id</code> for arrays.</p>
+        </div>
+        <div class="flow-note">
+          <strong>Baseline (learning → frozen)</strong>
+          <p>Accumulates N samples, then atomically freezes into a lock-free snapshot. Post-freeze reads need no mutex.</p>
+        </div>
+        <div class="flow-note">
+          <strong>Detector → Enforcer</strong>
+          <p>Stateless diff against frozen baseline. Four event kinds. Enforcer applies Warn / Block / Quarantine.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CODE EXAMPLES -->
+<section class="code-section" id="examples">
+  <div class="container">
+    <div class="section-label">Examples</div>
+    <h2>Up and running<br/>in minutes.</h2>
+    <p class="section-sub">Works with any broker via the generic adapter, or drop-in interceptors for Kafka and Redis Streams.</p>
+
+    <div class="tabs" id="tabs">
+      <button class="tab-btn active" onclick="switchTab('generic')">Generic</button>
+      <button class="tab-btn" onclick="switchTab('kafka')">Kafka</button>
+      <button class="tab-btn" onclick="switchTab('redis')">Redis Streams</button>
+    </div>
+
+    <!-- Generic -->
+    <div class="tab-panel active" id="tab-generic">
+      <div class="code-header">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <span class="filename">consumer.go</span>
+      </div>
+      <div class="code-block"><pre><span class="go-kw">import</span> <span class="go-pkg">(</span>
+    <span class="go-str">"github.com/VA-ibh-AV/schemadrift/adapters/generic"</span>
+    <span class="go-str">"github.com/VA-ibh-AV/schemadrift/pkg/drift"</span>
+<span class="go-pkg">)</span>
+
+interceptor, <span class="go-kw">err</span> <span class="go-op">:=</span> generic.<span class="go-fn">New</span>(generic.<span class="go-type">Config</span>{
+    Source<span class="go-op">:</span> <span class="go-str">"alerts.events.firing"</span>,
+    Baseline<span class="go-op">:</span> drift.<span class="go-type">BaselineConfig</span>{
+        LearningSamples<span class="go-op">:</span>     <span class="go-num">100</span>,
+        AllowOptionalFields<span class="go-op">:</span> <span class="go-bool">true</span>,
+        AllowNullable<span class="go-op">:</span>       <span class="go-bool">true</span>,
+    },
+    Policy<span class="go-op">:</span> drift.<span class="go-type">PolicyConfig</span>{
+        Policy<span class="go-op">:</span> drift.<span class="go-type">PolicyWarn</span>,
+        OnDrift<span class="go-op">:</span> <span class="go-kw">func</span>(report drift.<span class="go-type">DriftReport</span>) {
+            log.<span class="go-fn">Printf</span>(<span class="go-str">"drift on %s: %d event(s)"</span>, report.Source, <span class="go-fn">len</span>(report.Events))
+        },
+    },
+    StorePath<span class="go-op">:</span> <span class="go-str">"/var/lib/myservice/alerts-baseline.json"</span>,
+}, <span class="go-kw">func</span>(ctx context.<span class="go-type">Context</span>, payload []<span class="go-type">byte</span>) <span class="go-type">error</span> {
+    <span class="go-kw">return</span> <span class="go-fn">processAlert</span>(payload) <span class="go-cmt">// your business logic</span>
+})
+
+<span class="go-cmt">// In your consume loop:</span>
+<span class="go-kw">for</span> msg <span class="go-op">:=</span> <span class="go-kw">range</span> messages {
+    <span class="go-kw">if</span> err <span class="go-op">:=</span> interceptor.<span class="go-fn">Handle</span>(ctx, msg.Value); err <span class="go-op">!=</span> <span class="go-kw">nil</span> {
+        log.<span class="go-fn">Error</span>(<span class="go-str">"drift enforcement rejected message"</span>, <span class="go-str">"err"</span>, err)
+    }
+}</pre></div>
+    </div>
+
+    <!-- Kafka -->
+    <div class="tab-panel" id="tab-kafka">
+      <div class="code-header">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <span class="filename">kafka_consumer.go</span>
+      </div>
+      <div class="code-block"><pre><span class="go-kw">import</span> <span class="go-pkg">(</span>
+    <span class="go-str">"github.com/VA-ibh-AV/schemadrift/adapters/kafka"</span>
+    <span class="go-str">"github.com/VA-ibh-AV/schemadrift/pkg/drift"</span>
+<span class="go-pkg">)</span>
+
+interceptor, <span class="go-kw">err</span> <span class="go-op">:=</span> kafka.<span class="go-fn">NewInterceptor</span>(kafka.<span class="go-type">ConsumerConfig</span>{
+    Baseline<span class="go-op">:</span> drift.<span class="go-type">BaselineConfig</span>{
+        LearningSamples<span class="go-op">:</span>     <span class="go-num">100</span>,
+        AllowOptionalFields<span class="go-op">:</span> <span class="go-bool">false</span>, <span class="go-cmt">// strict: every field required</span>
+        AllowNullable<span class="go-op">:</span>       <span class="go-bool">false</span>,
+    },
+    Policy<span class="go-op">:</span> drift.<span class="go-type">PolicyConfig</span>{
+        Policy<span class="go-op">:</span> drift.<span class="go-type">PolicyQuarantine</span>,
+        DLQ<span class="go-op">:</span>    myDLQSink,
+        OnDrift<span class="go-op">:</span> <span class="go-kw">func</span>(report drift.<span class="go-type">DriftReport</span>) {
+            <span class="go-kw">for</span> _, ev <span class="go-op">:=</span> <span class="go-kw">range</span> report.Events {
+                log.<span class="go-fn">Printf</span>(<span class="go-str">"[%s] field=%s expected=%s got=%s"</span>,
+                    ev.Kind, ev.Field, ev.Expected, ev.Got)
+            }
+        },
+    },
+    StoreDir<span class="go-op">:</span> <span class="go-str">"/var/lib/myservice/baselines"</span>, <span class="go-cmt">// one file per topic</span>
+})
+
+<span class="go-kw">for</span> {
+    msg <span class="go-op">:=</span> reader.<span class="go-fn">ReadMessage</span>(ctx)
+    err <span class="go-op">:=</span> interceptor.<span class="go-fn">Handle</span>(ctx, msg, <span class="go-kw">func</span>(ctx context.<span class="go-type">Context</span>, m kafkago.<span class="go-type">Message</span>) <span class="go-type">error</span> {
+        <span class="go-kw">return</span> <span class="go-fn">processMessage</span>(m.Value)
+    })
+    <span class="go-kw">if</span> err <span class="go-op">!=</span> <span class="go-kw">nil</span> {
+        log.<span class="go-fn">Error</span>(<span class="go-str">"blocked or quarantined"</span>, <span class="go-str">"err"</span>, err)
+    }
+}</pre></div>
+    </div>
+
+    <!-- Redis -->
+    <div class="tab-panel" id="tab-redis">
+      <div class="code-header">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <span class="filename">redis_consumer.go</span>
+      </div>
+      <div class="code-block"><pre><span class="go-kw">import</span> <span class="go-pkg">(</span>
+    <span class="go-str">"github.com/VA-ibh-AV/schemadrift/adapters/redis"</span>
+    <span class="go-str">"github.com/VA-ibh-AV/schemadrift/pkg/drift"</span>
+<span class="go-pkg">)</span>
+
+interceptor, <span class="go-kw">err</span> <span class="go-op">:=</span> redis.<span class="go-fn">NewInterceptor</span>(redis.<span class="go-type">ConsumerConfig</span>{
+    Baseline<span class="go-op">:</span> drift.<span class="go-type">BaselineConfig</span>{LearningSamples<span class="go-op">:</span> <span class="go-num">50</span>},
+    Policy<span class="go-op">:</span>   drift.<span class="go-type">PolicyConfig</span>{Policy<span class="go-op">:</span> drift.<span class="go-type">PolicyWarn</span>},
+    StoreDir<span class="go-op">:</span>     <span class="go-str">"/var/lib/myservice/baselines"</span>,
+    PayloadField<span class="go-op">:</span> <span class="go-str">"data"</span>, <span class="go-cmt">// JSON is in this XMessage field</span>
+})
+
+<span class="go-cmt">// XRead loop — streams: [name1, name2, id1, id2]</span>
+streams, _ <span class="go-op">:=</span> rdb.<span class="go-fn">XRead</span>(ctx, <span class="go-op">&amp;</span>goredis.<span class="go-type">XReadArgs</span>{
+    Streams<span class="go-op">:</span> []<span class="go-type">string</span>{<span class="go-str">"orders:updates"</span>, <span class="go-str">"users:events"</span>, lastID[<span class="go-str">"orders:updates"</span>], lastID[<span class="go-str">"users:events"</span>]},
+    Count<span class="go-op">:</span>   <span class="go-num">20</span>, Block<span class="go-op">:</span> time.<span class="go-type">Second</span>,
+}).<span class="go-fn">Result</span>()
+
+<span class="go-kw">for</span> _, s <span class="go-op">:=</span> <span class="go-kw">range</span> streams {
+    <span class="go-kw">for</span> _, msg <span class="go-op">:=</span> <span class="go-kw">range</span> s.Messages {
+        interceptor.<span class="go-fn">Handle</span>(ctx, s.Stream, msg, <span class="go-kw">func</span>(ctx context.<span class="go-type">Context</span>, m goredis.<span class="go-type">XMessage</span>) <span class="go-type">error</span> {
+            <span class="go-kw">return</span> <span class="go-fn">processOrder</span>(m)
+        })
+    }
+}</pre></div>
+    </div>
+  </div>
+</section>
+
+<!-- POLICIES -->
+<section class="policies-section" id="policies">
+  <div class="container">
+    <div class="section-label">Enforcement Policies</div>
+    <h2>You choose what<br/>happens on drift.</h2>
+    <p class="section-sub">All policies emit the <code style="font-family:'JetBrains Mono',monospace;font-size:.9em;color:var(--red)">OnDrift</code> callback before enforcement — hook in your metrics, alerts, or logging there.</p>
+    <div class="policy-grid">
+      <div class="policy-card policy-warn">
+        <div class="policy-name">PolicyWarn</div>
+        <div class="policy-desc">Logs the drift report and lets the message through to your handler. Drift is visible but non-blocking.</div>
+        <div class="policy-when"><strong>Use when:</strong> You want observability without risk. Early adoption, canary rollout, high-optionality schemas.</div>
+      </div>
+      <div class="policy-card policy-block">
+        <div class="policy-name">PolicyBlock</div>
+        <div class="policy-desc">Returns an error. The message never reaches your handler. The caller decides whether to retry, skip, or page.</div>
+        <div class="policy-when"><strong>Use when:</strong> Strict enforcement. Downstream systems can't tolerate malformed input. Critical financial or safety pipelines.</div>
+      </div>
+      <div class="policy-card policy-quar">
+        <div class="policy-name">PolicyQuarantine</div>
+        <div class="policy-desc">Writes the original payload + full drift report to a DLQ sink, then returns an error. Drifted messages are replayable.</div>
+        <div class="policy-when"><strong>Use when:</strong> You want enforcement now but need the ability to replay after a producer-side schema upgrade is confirmed.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EVENTS -->
+<section class="events-section" id="events">
+  <div class="container">
+    <div class="section-label">Drift Events</div>
+    <h2>Four kinds of drift.<br/>All covered.</h2>
+    <p class="section-sub">Every <code style="font-family:'JetBrains Mono',monospace;font-size:.9em;color:var(--red)">DriftReport</code> carries one or more events with the field path, expected value, and actual value.</p>
+    <div class="events-grid">
+      <div class="event-card">
+        <div class="event-kind">type_change</div>
+        <div class="event-info">
+          <h4>Type Change</h4>
+          <p>A field's JSON wire type changed between the baseline and the incoming message. e.g. <code style="font-family:'JetBrains Mono',monospace;font-size:.85em">value</code> was <code style="font-family:'JetBrains Mono',monospace;font-size:.85em;color:var(--green)">number</code>, received as <code style="font-family:'JetBrains Mono',monospace;font-size:.85em;color:var(--red)">string</code>.</p>
+        </div>
+      </div>
+      <div class="event-card">
+        <div class="event-kind">missing_field</div>
+        <div class="event-info">
+          <h4>Missing Field</h4>
+          <p>A field marked required in the baseline is absent from the incoming message. e.g. <code style="font-family:'JetBrains Mono',monospace;font-size:.85em">host</code> was always present during learning but is now gone.</p>
+        </div>
+      </div>
+      <div class="event-card">
+        <div class="event-kind">new_field</div>
+        <div class="event-info">
+          <h4>New Field</h4>
+          <p>A field appears in the message that was never seen during the learning phase. e.g. producer added <code style="font-family:'JetBrains Mono',monospace;font-size:.85em">severity</code> without notice.</p>
+        </div>
+      </div>
+      <div class="event-card">
+        <div class="event-kind">nullability_change</div>
+        <div class="event-info">
+          <h4>Nullability Change</h4>
+          <p>A field that was never null during learning arrives as <code style="font-family:'JetBrains Mono',monospace;font-size:.85em">null</code>. Only fires when <code style="font-family:'JetBrains Mono',monospace;font-size:.85em">AllowNullable: false</code>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-card">
+      <div class="section-label" style="justify-content:center;display:flex">Get started</div>
+      <h2>Add drift detection<br/>in one afternoon.</h2>
+      <p>No new infrastructure. No schema files. No broker changes. Just add the interceptor to your existing consume loop.</p>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+        <a href="https://github.com/VA-ibh-AV/schemadrift" class="btn btn-primary" target="_blank">View on GitHub</a>
+        <a href="https://pkg.go.dev/github.com/VA-ibh-AV/schemadrift" class="btn btn-outline" target="_blank">API Reference →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">
+      <div class="logo-icon" style="width:24px;height:24px;background:var(--red);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff">SD</div>
+      SchemaDrift
+    </div>
+    <ul class="footer-links">
+      <li><a href="https://github.com/VA-ibh-AV/schemadrift" target="_blank">GitHub</a></li>
+      <li><a href="https://pkg.go.dev/github.com/VA-ibh-AV/schemadrift" target="_blank">pkg.go.dev</a></li>
+      <li><a href="https://github.com/VA-ibh-AV/schemadrift/issues" target="_blank">Issues</a></li>
+      <li><a href="https://github.com/VA-ibh-AV/schemadrift/blob/main/readme.md" target="_blank">Docs</a></li>
+    </ul>
+    <div class="footer-copy">
+      MIT License &nbsp;·&nbsp; Built with Go &nbsp;·&nbsp; Zero external dependencies in core
+    </div>
+  </div>
+</footer>
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+      b.classList.toggle('active', b.textContent.trim().toLowerCase().replace(' streams','') === name || (name === 'redis' && b.textContent.includes('Redis')));
+    });
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  function copyInstall(el) {
+    navigator.clipboard.writeText('go get github.com/VA-ibh-AV/schemadrift').then(() => {
+      const btn = el.querySelector('#copy-btn');
+      btn.textContent = 'Copied!';
+      btn.style.color = 'var(--green)';
+      btn.style.borderColor = 'var(--green)';
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }, 2000);
+    });
+  }
+</script>
+</body>
+</html>
