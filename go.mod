@@ -1,4 +1,4 @@
-module github.com/VA-ibh-AV/go-schemadrift
+module github.com/VA-ibh-AV/schemadrift
 
 go 1.21
 

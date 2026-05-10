@@ -1,6 +1,6 @@
 package metrics
 
-import "github.com/VA-ibh-AV/go-schemadrift/pkg/drift"
+import "github.com/VA-ibh-AV/schemadrift/pkg/drift"
 
 // Recorder is the interface for emitting per-message drift metrics.
 // Implement this to plug in OTel, Prometheus, StatsD, or any other backend.

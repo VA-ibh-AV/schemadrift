@@ -1,14 +1,14 @@
-# go-schemadrift
+# schemadrift
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/VA-ibh-AV/go-schemadrift.svg)](https://pkg.go.dev/github.com/VA-ibh-AV/go-schemadrift)
-[![Go Report Card](https://goreportcard.com/badge/github.com/VA-ibh-AV/go-schemadrift)](https://goreportcard.com/report/github.com/VA-ibh-AV/go-schemadrift)
+[![Go Reference](https://pkg.go.dev/badge/github.com/VA-ibh-AV/schemadrift.svg)](https://pkg.go.dev/github.com/VA-ibh-AV/schemadrift)
+[![Go Report Card](https://goreportcard.com/badge/github.com/VA-ibh-AV/schemadrift)](https://goreportcard.com/report/github.com/VA-ibh-AV/schemadrift)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **In-process schema drift detection for JSON message streams.**
 
 Runs inside your consumer process. Calls back into your code on the first drifted message. No schema registry, no sidecar, no broker change.
 
-`go-schemadrift` sits between your broker consumer and your business logic. It learns the structure of your messages during a configurable warm-up period, then detects and acts on structural changes — type changes, missing fields, unexpected new fields — before they silently corrupt your pipeline.
+`schemadrift` sits between your broker consumer and your business logic. It learns the structure of your messages during a configurable warm-up period, then detects and acts on structural changes — type changes, missing fields, unexpected new fields — before they silently corrupt your pipeline.
 
 Core library has zero external dependencies. Adapters for Kafka, Redis Streams, NATS, and anything that produces `[]byte`.
 
@@ -30,13 +30,13 @@ After (what the producer silently changed):
 
 By the time you notice, thousands of malformed messages have flowed through. At 50k agents each emitting events, even a 0.1% drift rate is 50 bad messages per second.
 
-`go-schemadrift` catches this on the **first drifted message**.
+`schemadrift` catches this on the **first drifted message**.
 
 ---
 
 ## Why not X?
 
-| Alternative | When to use it | When `go-schemadrift` fits better |
+| Alternative | When to use it | When `schemadrift` fits better |
 |---|---|---|
 | **Confluent / Apicurio Schema Registry** | You're already on Avro/Protobuf and your producers cooperate | You're on JSON, can't change producers, or want runtime enforcement at the consumer |
 | **JSON Schema validators** (`gojsonschema`, etc.) | You have a hand-written schema and want producers to conform to it | You don't *have* a schema — you want one inferred from real traffic, with no manual upkeep |
@@ -63,7 +63,7 @@ The differentiator: **no extra infrastructure.** Drop one library into your cons
 ## Installation
 
 ```bash
-go get github.com/VA-ibh-AV/go-schemadrift
+go get github.com/VA-ibh-AV/schemadrift
 ```
 
 ---
@@ -74,8 +74,8 @@ go get github.com/VA-ibh-AV/go-schemadrift
 
 ```go
 import (
-    "github.com/VA-ibh-AV/go-schemadrift/adapters/generic"
-    "github.com/VA-ibh-AV/go-schemadrift/pkg/drift"
+    "github.com/VA-ibh-AV/schemadrift/adapters/generic"
+    "github.com/VA-ibh-AV/schemadrift/pkg/drift"
 )
 
 interceptor, err := generic.New(generic.Config{
@@ -106,8 +106,8 @@ for msg := range messages {
 
 ```go
 import (
-    "github.com/VA-ibh-AV/go-schemadrift/adapters/kafka"
-    "github.com/VA-ibh-AV/go-schemadrift/pkg/drift"
+    "github.com/VA-ibh-AV/schemadrift/adapters/kafka"
+    "github.com/VA-ibh-AV/schemadrift/pkg/drift"
 )
 
 interceptor, err := kafka.NewInterceptor(kafka.ConsumerConfig{
@@ -336,7 +336,7 @@ Suggested metric names:
 ## Project Structure
 
 ```
-go-schemadrift/
+schemadrift/
 ├── pkg/
 │   ├── drift/
 │   │   ├── schema.go      # Fingerprinter — JSON → Schema (field paths + types)
@@ -397,8 +397,8 @@ go-schemadrift/
 Pull requests are welcome. For large changes, open an issue first to discuss the design.
 
 ```bash
-git clone https://github.com/VA-ibh-AV/go-schemadrift
-cd go-schemadrift
+git clone https://github.com/VA-ibh-AV/schemadrift
+cd schemadrift
 go test ./...
 ```
 

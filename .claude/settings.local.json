@@ -25,7 +25,10 @@
       "Read(//etc/**)",
       "Bash(nc -zv node_2 9092)",
       "Bash(nc -zv node_3 9092)",
-      "Bash(xargs sed -i 's/yourusername/VA-ibh-AV/g')"
+      "Bash(xargs sed -i 's/yourusername/VA-ibh-AV/g')",
+      "Bash(xargs sed -i 's|github.com/VA-ibh-AV/go-schemadrift|github.com/VA-ibh-AV/schemadrift|g')",
+      "Bash(sed -i 's|github.com/VA-ibh-AV/go-schemadrift|github.com/VA-ibh-AV/schemadrift|g' /home/admin/vaibhav/schemadrift/readme.md /home/admin/vaibhav/schemadrift/CLAUDE.md)",
+      "Bash(sed -i 's|go-schemadrift|schemadrift|g' /home/admin/vaibhav/schemadrift/readme.md)"
     ]
   }
 }

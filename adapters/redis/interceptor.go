@@ -17,9 +17,9 @@ import (
 
 	goredis "github.com/redis/go-redis/v9"
 
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/drift"
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/metrics"
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/store"
+	"github.com/VA-ibh-AV/schemadrift/pkg/drift"
+	"github.com/VA-ibh-AV/schemadrift/pkg/metrics"
+	"github.com/VA-ibh-AV/schemadrift/pkg/store"
 )
 
 // ConsumerConfig is shared across all streams handled by one Interceptor.

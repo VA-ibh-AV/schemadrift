@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/drift"
+	"github.com/VA-ibh-AV/schemadrift/pkg/drift"
 )
 
 // FileStore persists a Baseline to disk using an atomic write (tmp + rename).

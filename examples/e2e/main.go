@@ -19,9 +19,9 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 	kafkago "github.com/segmentio/kafka-go"
 
-	kafkaadapter "github.com/VA-ibh-AV/go-schemadrift/adapters/kafka"
-	redisadapter "github.com/VA-ibh-AV/go-schemadrift/adapters/redis"
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/drift"
+	kafkaadapter "github.com/VA-ibh-AV/schemadrift/adapters/kafka"
+	redisadapter "github.com/VA-ibh-AV/schemadrift/adapters/redis"
+	"github.com/VA-ibh-AV/schemadrift/pkg/drift"
 )
 
 var (

@@ -10,9 +10,9 @@ import (
 
 	kafkago "github.com/segmentio/kafka-go"
 
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/drift"
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/metrics"
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/store"
+	"github.com/VA-ibh-AV/schemadrift/pkg/drift"
+	"github.com/VA-ibh-AV/schemadrift/pkg/metrics"
+	"github.com/VA-ibh-AV/schemadrift/pkg/store"
 )
 
 // ConsumerConfig is shared across all topics handled by one Interceptor.

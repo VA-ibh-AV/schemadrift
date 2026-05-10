@@ -6,9 +6,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/drift"
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/metrics"
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/store"
+	"github.com/VA-ibh-AV/schemadrift/pkg/drift"
+	"github.com/VA-ibh-AV/schemadrift/pkg/metrics"
+	"github.com/VA-ibh-AV/schemadrift/pkg/store"
 )
 
 // Config is the full configuration for a generic Interceptor.

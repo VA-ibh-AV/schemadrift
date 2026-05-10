@@ -64,7 +64,7 @@ Each adapter maintains a `map[topic/stream → perSourceState]` with lazy init u
 
 ## Key design decisions
 
-- Module is `github.com/VA-ibh-AV/go-schemadrift` — update when publishing.
+- Module is `github.com/VA-ibh-AV/schemadrift` — update when publishing.
 - Core (`pkg/`) has zero external dependencies; adapters depend only on their broker SDK.
 - Baseline freeze is one-way and irreversible at runtime. Delete the store file to reset.
 - `AllowOptionalFields: false` + `AllowNullable: false` = strictest enforcement; use `true` for production with variable schemas.

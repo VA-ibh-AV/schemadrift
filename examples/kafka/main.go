@@ -26,8 +26,8 @@ import (
 
 	kafkago "github.com/segmentio/kafka-go"
 
-	kafkaadapter "github.com/VA-ibh-AV/go-schemadrift/adapters/kafka"
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/drift"
+	kafkaadapter "github.com/VA-ibh-AV/schemadrift/adapters/kafka"
+	"github.com/VA-ibh-AV/schemadrift/pkg/drift"
 )
 
 const broker = "localhost:9094"

@@ -32,8 +32,8 @@ import (
 
 	goredis "github.com/redis/go-redis/v9"
 
-	redisadapter "github.com/VA-ibh-AV/go-schemadrift/adapters/redis"
-	"github.com/VA-ibh-AV/go-schemadrift/pkg/drift"
+	redisadapter "github.com/VA-ibh-AV/schemadrift/adapters/redis"
+	"github.com/VA-ibh-AV/schemadrift/pkg/drift"
 )
 
 const redisAddr = "localhost:6379"
