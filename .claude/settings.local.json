@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go version *)",
+      "Bash(go mod *)",
+      "Bash(go build *)",
+      "Bash(docker compose *)",
+      "Bash(sudo docker *)",
+      "Bash(sudo lsof -i :9092)",
+      "Bash(sudo ss -tlnp)",
+      "Bash(nc -zv 100.97.194.79 9092)",
+      "Bash(nc -zv localhost 9092)",
+      "Bash(nc -zv localhost 6379)",
+      "Bash(redis-cli ping *)",
+      "Bash(/opt/kafka/bin/kafka-topics.sh --bootstrap-server 100.97.194.79:9092 --list)",
+      "Bash(/home/admin/setups/kafka_2.13-3.5.0/bin/kafka-topics.sh --bootstrap-server 100.97.194.79:9092 --list)",
+      "Bash(rm -rf /tmp/schemadrift-e2e)",
+      "Bash(mkdir -p /tmp/schemadrift-e2e)",
+      "Bash(go run *)",
+      "Bash(/home/admin/setups/kafka_2.13-3.5.0/bin/kafka-topics.sh --bootstrap-server 100.97.194.79:9092 --describe --topic schemadrift-e2e-alerts-1778311136)",
+      "Bash(/home/admin/setups/kafka_2.13-3.5.0/bin/kafka-configs.sh --bootstrap-server 100.97.194.79:9092 --describe --broker 1)",
+      "Bash(/home/admin/setups/kafka_2.13-3.5.0/bin/kafka-broker-api-versions.sh --bootstrap-server 100.97.194.79:9092)",
+      "Bash(/home/admin/setups/kafka_2.13-3.5.0/bin/kafka-topics.sh --bootstrap-server 100.97.194.79:9092 --describe --topic __consumer_offsets)",
+      "Bash(getent hosts *)",
+      "Read(//etc/**)",
+      "Bash(nc -zv node_2 9092)",
+      "Bash(nc -zv node_3 9092)",
+      "Bash(xargs sed -i 's/yourusername/VA-ibh-AV/g')"
+    ]
+  }
+}
